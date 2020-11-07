@@ -32,23 +32,65 @@ var server = app.listen(port, () => {
 ///////////////////////////////
 
 /*
-ranking_goal/{season_tag}
+ranking/teams/{season_tag}
 */
-app.get('/api/ranking_goal/:season_tag', (req, res) => {
+app.get('/ranking/teams/:season_tag', (req, res) => {
+  var season_tag = req.params.season_tag;
+  var query = "SELECT position, name, points FROM rankings AS R join teams AS T on R.team_id = T.team_id WHERE season_tag = '"+ season_tag +"' ORDER BY points DESC;";
+  database.query(query, (err, result) => {
+    if (err) {
+      res.statusCode = 500;
+      res.json({
+         'message':'Internal Server Error',
+         'data': err
+      })
+    } else {
+      var data = result.rows;
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': data
+        })
+      }
+    }
+    res.end();
+  })
+});
+/*
+ranking/goals/{season_tag}
+*/
+app.get('/ranking/goals/:season_tag', (req, res) => {
   var season_tag = req.params.season_tag;
   var query = "SELECT goals, name from scorers AS S JOIN players AS P ON S.player_id = P.player_id WHERE season_tag = '"+season_tag+"' ORDER BY goals DESC;";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
-      res.end();
-    } else {
-      res.statusCode = 200;
-      var data = result.rows;
       res.json({
-         data
+         'message':'Internal Server Error',
+         'data': err
       })
-      res.end();
+    } else {
+      var data = result.rows;
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': data
+        })
+      }
     }
+    res.end();
   })
 });
 
