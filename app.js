@@ -192,7 +192,7 @@ Ritorno classifica dei cartellini totali presi dai giocatori in una stagione cla
 app.get('/ranking/cards/:season_tag', (req, res) => {
   console.log("Rispondo richiesta: /ranking/cards/:season_tag");
   var season_tag = req.params.season_tag;
-  var query = "SELECT sum(R.cards + Y.cards) as tot, name FROM yellows AS Y JOIN reds as R ON Y.player_id = R.player_id JOIN players AS P ON Y.player_id = P.player_id WHERE R.season_tag = '"+season_tag+"'AND Y.season_tag = '"+season_tag+"' GROUP BY name ORDER BY tot DESC;";
+  var query = "SELECT sum(R.cards + Y.cards) as value, name FROM yellows AS Y JOIN reds as R ON Y.player_id = R.player_id JOIN players AS P ON Y.player_id = P.player_id WHERE R.season_tag = '"+season_tag+"'AND Y.season_tag = '"+season_tag+"' GROUP BY name ORDER BY value DESC;";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
@@ -662,7 +662,7 @@ app.get('/player/goals/:name&:season_tag', (req, res) => {
   console.log("Rispondo richiesta: /player/goals/:name&:season_tag");
   var name = req.params.name;
   var season_tag = req.params.season_tag;
-  var query = "SELECT P.name, S.goals, season_tag FROM scorers AS S JOIN players AS P ON S.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
+  var query = "SELECT P.name, S.goals AS value, season_tag FROM scorers AS S JOIN players AS P ON S.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
@@ -697,7 +697,7 @@ app.get('/player/yellows/:name&:season_tag', (req, res) => {
   console.log("Rispondo richiesta: /player/yellows/:name&:season_tag");
   var name = req.params.name;
   var season_tag = req.params.season_tag;
-  var query = "SELECT P.name, Y.cards, season_tag FROM yellows AS Y JOIN players AS P ON Y.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
+  var query = "SELECT P.name, Y.cards AS value, season_tag FROM yellows AS Y JOIN players AS P ON Y.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
@@ -732,7 +732,7 @@ app.get('/player/reds/:name&:season_tag', (req, res) => {
   console.log("Rispondo richiesta: /player/reds/:name&:season_tag");
   var name = req.params.name;
   var season_tag = req.params.season_tag;
-  var query = "SELECT P.name, R.cards, season_tag FROM reds AS R JOIN players AS P ON R.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
+  var query = "SELECT P.name, R.cards AS value, season_tag FROM reds AS R JOIN players AS P ON R.player_id = P.player_id WHERE name = '"+name+"' AND season_tag = '"+season_tag+"';";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
@@ -767,7 +767,7 @@ app.get('/player/cards/:name&:season_tag', (req, res) => {
   console.log("Rispondo richiesta: /player/cards/:name&:season_tag");
   var name = req.params.name;
   var season_tag = req.params.season_tag;
-  var query = "SELECT  P.name, sum(R.cards + Y.cards) as tot FROM yellows AS Y JOIN reds as R ON Y.player_id = R.player_id JOIN players AS P ON Y.player_id = P.player_id WHERE R.season_tag = '"+season_tag+"' AND Y.season_tag = '"+season_tag+"' AND P.name = '"+name+"' GROUP BY name ORDER BY tot DESC;";
+  var query = "SELECT  P.name, sum(R.cards + Y.cards)  AS value FROM yellows AS Y JOIN reds as R ON Y.player_id = R.player_id JOIN players AS P ON Y.player_id = P.player_id WHERE R.season_tag = '"+season_tag+"' AND Y.season_tag = '"+season_tag+"' AND P.name = '"+name+"' GROUP BY name ORDER BY value DESC;";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
@@ -787,6 +787,192 @@ app.get('/player/cards/:name&:season_tag', (req, res) => {
         res.json({
           'message':'Success',
           'data': data
+        })
+      }
+    }
+    res.end();
+  })
+});
+
+/*
+/player/date/goals/{name}&{date}
+Ritorno goal totali presi da un giocatore a partire da una data
+*/
+
+app.get('/player/date/goals/:name&:date', (req, res) => {
+  console.log("Rispondo richiesta: /player/goals/:name&:date");
+  var name = req.params.name;
+  var date = req.params.date;
+  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE name = '"+name+"' AND action='GOAL';";
+  database.query(query, (err, result) => {
+    if (err) {
+      res.statusCode = 500;
+      res.json({
+         'message':'Internal Server Error',
+         'data': err
+      })
+    } else {
+      var data = result.rows;
+      var total=[];
+      data.forEach(function(object) {
+        var parts = object.date.split('.');
+        var input= date.split('.');
+        var mydate = new Date(parts[2], parts[1] - 1, parts[0]);
+        var inputDate = new Date(input[2], input[1] - 1, input[0]);
+        if(mydate.getTime()>inputDate.getTime()){
+          total.push(object);
+        }
+      });
+    var result={'name':name, 'value':total.length};
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': result
+        })
+      }
+    }
+    res.end();
+  })
+});
+
+
+/*
+/player/date/yellows/{name}&{date}
+Ritorno cartellini gialli totali presi da un giocatore a partire da una data
+*/
+
+app.get('/player/date/yellows/:name&:date', (req, res) => {
+  console.log("Rispondo richiesta: /player/goals/:name&:date");
+  var name = req.params.name;
+  var date = req.params.date;
+  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE name = '"+name+"' AND action='YELLOW';";
+  database.query(query, (err, result) => {
+    if (err) {
+      res.statusCode = 500;
+      res.json({
+         'message':'Internal Server Error',
+         'data': err
+      })
+    } else {
+      var data = result.rows;
+      var total=[];
+      data.forEach(function(object) {
+        var parts = object.date.split('.');
+        var input= date.split('.');
+        var mydate = new Date(parts[2], parts[1] - 1, parts[0]);
+        var inputDate = new Date(input[2], input[1] - 1, input[0]);
+        if(mydate.getTime()>inputDate.getTime()){
+          total.push(object);
+        }
+      });
+    var result={'name':name, 'value':total.length};
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': result
+        })
+      }
+    }
+    res.end();
+  })
+});
+
+
+/*
+/player/date/reds/{name}&{date}
+Ritorno cartellini rossi totali presi da un giocatore a partire da una data
+*/
+
+app.get('/player/date/reds/:name&:date', (req, res) => {
+  console.log("Rispondo richiesta: /player/goals/:name&:date");
+  var name = req.params.name;
+  var date = req.params.date;
+  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE name = '"+name+"' AND action='RED';";
+  database.query(query, (err, result) => {
+    if (err) {
+      res.statusCode = 500;
+      res.json({
+         'message':'Internal Server Error',
+         'data': err
+      })
+    } else {
+      var data = result.rows;
+      var total=[];
+      data.forEach(function(object) {
+        var parts = object.date.split('.');
+        var input= date.split('.');
+        var mydate = new Date(parts[2], parts[1] - 1, parts[0]);
+        var inputDate = new Date(input[2], input[1] - 1, input[0]);
+        if(mydate.getTime()>inputDate.getTime()){
+          total.push(object);
+        }
+      });
+    var result={'name':name, 'value':total.length};
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': result
+        })
+      }
+    }
+    res.end();
+  })
+});
+
+
+app.get('/player/date/reds/:name&:date', (req, res) => {
+  console.log("Rispondo richiesta: /player/goals/:name&:date");
+  var name = req.params.name;
+  var date = req.params.date;
+  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE name = '"+name+"' AND action='RED' OR action='YELLOW';";
+  database.query(query, (err, result) => {
+    if (err) {
+      res.statusCode = 500;
+      res.json({
+         'message':'Internal Server Error',
+         'data': err
+      })
+    } else {
+      var data = result.rows;
+      var total=[];
+      data.forEach(function(object) {
+        var parts = object.date.split('.');
+        var input= date.split('.');
+        var mydate = new Date(parts[2], parts[1] - 1, parts[0]);
+        var inputDate = new Date(input[2], input[1] - 1, input[0]);
+        if(mydate.getTime()>inputDate.getTime()){
+          total.push(object);
+        }
+      });
+    var result={'name':name, 'value':total.length};
+      if (data.length == 0) {
+        res.statusCode = 404;
+        res.json({
+           'message':'Data not present on the DB'
+        })
+      } else {
+        res.statusCode = 200;
+        res.json({
+          'message':'Success',
+          'data': result
         })
       }
     }
