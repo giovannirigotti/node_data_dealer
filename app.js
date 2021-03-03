@@ -938,11 +938,16 @@ app.get('/player/date/reds/:name&:date', (req, res) => {
 });
 
 
-app.get('/player/date/reds/:name&:date', (req, res) => {
+/*
+/player/date/cards/{name}&{date}
+Ritorno cartellini totali presi da un giocatore a partire da una data
+*/
+
+app.get('/player/date/cards/:name&:date', (req, res) => {
   console.log("Rispondo richiesta: /player/goals/:name&:date");
   var name = req.params.name;
   var date = req.params.date;
-  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE name = '"+name+"' AND action='RED' OR action='YELLOW';";
+  var query = "SELECT P.name, action AS value, G.date FROM informations AS I JOIN players AS P ON I.player_id = P.player_id JOIN games AS G ON I.game_id=G.game_id WHERE P.name = '"+name+"' AND (action='RED' OR action='YELLOW');";
   database.query(query, (err, result) => {
     if (err) {
       res.statusCode = 500;
